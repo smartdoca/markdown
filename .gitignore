@@ -1,0 +1,26 @@
+# Dependencies and generated builds
+node_modules/
+/dist/
+/demo-dist/
+*.tsbuildinfo
+
+# Locally packed npm releases (publish through an artifact store or release)
+/exmd-collaborative-editor-*.tgz
+
+# Temporary package-consumer verification projects
+/tests/.consumer-*/
+/tests/.packed-*/
+
+# Test output and tool caches
+/coverage/
+/playwright-report/
+/test-results/
+.vite/
+*.log
+
+# Local configuration and OS files (keep the shared example)
+.env
+.env.*
+!.env.example
+*.local
+.DS_Store
