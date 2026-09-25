@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
 import { WebsocketProvider } from 'y-websocket'
 import { Awareness } from 'y-protocols/awareness'
 import type { CollaborationOptions, CollaborationSession, Collaborator, CollaborationUser, ConnectionState } from './types'
 import { assertSupportedMarkdownDocument, getMarkdownText, initializeMarkdownDocument, readMarkdownMetadata } from './protocol'
+import { translate } from './i18n'
 
 const COLORS = ['#7357d8', '#d9547a', '#16866f', '#d57828', '#3676c8', '#8a5b3d']
 export const DEFAULT_MARKDOWN = `# 一起写点什么
@@ -39,7 +40,12 @@ function createIdentity(): CollaborationUser {
 }
 
 export function useCollaboration(options: CollaborationOptions): CollaborationSession {
-  const { roomId, websocketUrl, initialValue = '', user, persistence = true, persistenceKey, readOnly = false, enabled = true } = options
+  const { roomId, websocketUrl, initialValue = '', user, persistence = true, persistenceKey, readOnly = false, enabled = true, locale, messages } = options
+  const localeRef = useRef(locale)
+  const messagesRef = useRef(messages)
+  localeRef.current = locale
+  messagesRef.current = messages
+  const refreshUsersRef = useRef<() => void>(() => {})
   const userName = user?.name
   const userColor = user?.color
   const userColorLight = user?.colorLight
@@ -57,6 +63,7 @@ export function useCollaboration(options: CollaborationOptions): CollaborationSe
 
   useEffect(() => {
     if (!enabled) return () => {
+      refreshUsersRef.current = () => {}
       resources.undoManager.destroy()
       resources.doc.destroy()
     }
@@ -106,16 +113,18 @@ export function useCollaboration(options: CollaborationOptions): CollaborationSe
       const users: Collaborator[] = []
       provider.awareness.getStates().forEach((value, clientId) => {
         const user = value.user as { name?: string; color?: string } | undefined
-        if (user) users.push({ clientId, name: user.name || '匿名', color: user.color || COLORS[0] })
+        if (user) users.push({ clientId, name: user.name || translate(localeRef.current, 'presence.anonymous', undefined, messagesRef.current), color: user.color || COLORS[0] })
       })
       setCollaborators(users)
     }
+    refreshUsersRef.current = updateUsers
     provider.on('status', onStatus)
     provider.on('sync', onSync)
     provider.awareness.on('change', updateUsers)
     setState(provider.wsconnected ? 'syncing' : 'loading')
     updateUsers()
     return () => {
+      refreshUsersRef.current = () => {}
       provider.off('status', onStatus)
       provider.off('sync', onSync)
       provider.awareness.off('change', updateUsers)
@@ -125,6 +134,7 @@ export function useCollaboration(options: CollaborationOptions): CollaborationSe
       resources.doc.destroy()
     }
   }, [enabled, initialValue, persistence, persistenceKey, readOnly, resources, roomId, userColor, userColorLight, userName, websocketUrl])
+  useEffect(() => { refreshUsersRef.current() }, [locale, messages])
 
   return { doc: resources.doc, text: resources.text, awareness: resources.awareness, undoManager: resources.undoManager,
     state, ready, saveState: 'unavailable', collaborators, error }

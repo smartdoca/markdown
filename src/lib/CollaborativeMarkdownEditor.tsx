@@ -27,10 +27,11 @@ import { createMarkdownTextAnchor, createMarkdownTextSelection, resolveMarkdownT
   type MarkdownTextAnchor, type MarkdownCommentAnchor, type MarkdownTextSelection } from '../editor/selection'
 import { activateCommentAnchorEffect, createAnnotationsExtension, refreshAnnotationsEffect,
   setCommentAnchorsEffect, setRemoteSelectionsEffect } from '../editor/annotations'
+import { collaborationErrorText, editorLanguageTag, translate, type EditorMessages, type MessageValues } from '../editor/i18n'
 
-export interface EditorHeaderProps { title: string; roomId: string; session: CollaborationSession }
-export interface EditorLoadingProps { state: ConnectionState; errorMessage?: string }
-export interface EditorFooterProps { readOnly: boolean }
+export interface EditorHeaderProps { title: string; roomId: string; session: CollaborationSession; locale?: string; messages?: EditorMessages }
+export interface EditorLoadingProps { state: ConnectionState; errorMessage?: string; locale?: string; messages?: EditorMessages }
+export interface EditorFooterProps { readOnly: boolean; locale?: string; messages?: EditorMessages }
 export interface CollaborativeMarkdownEditorComponents {
   Header?: ComponentType<EditorHeaderProps>
   Toolbar?: ComponentType<ToolbarProps>
@@ -74,18 +75,23 @@ export interface CollaborativeMarkdownEditorProps {
   selectionToolbar?: boolean
   /** Additional actions always displayed in the top toolbar. */
   toolbarActions?: MarkdownSelectionAction[]
+  /** `zh` or `en`. Omitted stays Chinese. Unknown codes display English. Switching it updates chrome only. */
+  locale?: string
+  /** Replaces individual catalog entries. Other keys keep the built-in translation. */
+  messages?: EditorMessages
 }
 
 // A host-managed editor never instantiates the standalone hook (including its spare Y.Doc/Awareness).
 export const CollaborativeMarkdownEditor = forwardRef<CollaborativeMarkdownEditorHandle, CollaborativeMarkdownEditorProps>(function Editor(props, ref) {
   if (props.collaboration) return <EditorSurface {...props} ref={ref} key={props.collaboration.doc.guid} />
-  if (!props.roomId || !props.websocketUrl) throw new Error('roomId 和 websocketUrl 必填，或传入宿主管理的 collaboration 会话')
+  if (!props.roomId || !props.websocketUrl) throw new Error(translate(props.locale, 'editor.transportRequired', undefined, props.messages))
   return <StandaloneEditor {...props} ref={ref} key={props.roomId + ':' + props.websocketUrl} />
 })
 const StandaloneEditor = forwardRef<CollaborativeMarkdownEditorHandle, CollaborativeMarkdownEditorProps>(function Standalone(props, ref) {
   const session = useCollaboration({ roomId: props.roomId!, websocketUrl: props.websocketUrl!,
     initialValue: props.initialValue, user: props.user, persistence: props.persistence,
-    persistenceKey: props.persistenceKey, readOnly: props.mode ? props.mode === 'readonly' : props.readOnly })
+    persistenceKey: props.persistenceKey, readOnly: props.mode ? props.mode === 'readonly' : props.readOnly,
+    locale: props.locale, messages: props.messages })
   return <EditorSurface {...props} collaboration={session} standalone ref={ref} />
 })
 const BASIC_SETUP = { lineNumbers: true, foldGutter: true, highlightActiveLine: true,
@@ -93,11 +99,18 @@ const BASIC_SETUP = { lineNumbers: true, foldGutter: true, highlightActiveLine: 
 const StableCodeMirror = memo(CodeMirror)
 
 const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, CollaborativeMarkdownEditorProps & { standalone?: boolean }>(function EditorSurface({ roomId, collaboration,
-  uploadImage = imageToDataUrl, defaultViewMode = 'split',
-  title = '协作文档', className = '', height = '100vh', syncScroll = true, previewDebounceMs, readOnly = false, mode: editorMode,
+  uploadImage: uploadImageProp, defaultViewMode = 'split',
+  title: titleProp, className = '', height = '100vh', syncScroll = true, previewDebounceMs, readOnly = false, mode: editorMode,
   resources, onUploadProgress, onDownload, onChange, onConnectionChange, components = {}, standalone = false,
-  selectionActions = [], selectionToolbar = true, toolbarActions = [],
+  selectionActions = [], selectionToolbar = true, toolbarActions = [], locale, messages,
 }, ref) {
+  const t = (key: string, values?: MessageValues) => translate(locale, key, values, messages)
+  const uploadImage = uploadImageProp ?? ((file: File) => imageToDataUrl(file, { locale, messages }))
+  const title = titleProp ?? t('document.title')
+  const localeRef = useRef(locale)
+  const messagesRef = useRef(messages)
+  localeRef.current = locale
+  messagesRef.current = messages
   const session = collaboration!
   const effectiveReadOnly = (editorMode ? editorMode === 'readonly' : readOnly) || !session.ready || session.state === 'error'
   const resolvedRoomId = roomId || 'document'
@@ -187,6 +200,7 @@ const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, Collaborativ
   const annotations = useMemo(() => createAnnotationsExtension(session.text, {
     showRemote: () => !live.current.readOnly && live.current.mode !== 'preview' && live.current.session.state === 'ready',
     onAnchorClick: id => activateCommentRef.current(id),
+    cursorLabel: name => translate(localeRef.current, 'presence.cursor', { name }, messagesRef.current),
   }), [session.text])
   const guard = useMemo(() => EditorState.transactionFilter.of(tr =>
     tr.docChanged && live.current.readOnly && !tr.annotation(ySyncAnnotation) ? [] : tr), [])
@@ -210,6 +224,8 @@ const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, Collaborativ
     binding, annotations, guard, undoKeys, selectionExtension],
   [annotations, binding, guard, nativeHistory, selectionExtension, undoKeys])
   const view = () => editorRef.current?.view
+  const cursorTemplate = t('presence.cursor', { name: ' ' })
+  useEffect(() => { view()?.dispatch({ effects: refreshAnnotationsEffect.of() }) }, [cursorTemplate])
   useEffect(() => {
     if (mode === 'preview') activeView.current = 'preview'
     if (mode === 'edit') { activeView.current = 'source'; preview.clearSelection() }
@@ -238,18 +254,18 @@ const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, Collaborativ
     }
   }, [selectionActions.length, toolbarActions.length, refreshActions])
   const runAction = (action: MarkdownAction) => { const current = view(); if (current && !effectiveReadOnly) applyMarkdownAction(current, action) }
-  const insertDiagram = () => { const current = view(); if (current) insertAtSelection(current, '\n```mermaid\nflowchart TD\n  A[开始] --> B{判断}\n  B -->|是| C[完成]\n  B -->|否| D[调整]\n```\n') }
+  const insertDiagram = () => { const current = view(); if (current) insertAtSelection(current, t('insert.diagram')) }
   const insertFormula = () => { const current = view(); if (current) insertAtSelection(current, '\n$$\nE = mc^2\n$$\n') }
-  const insertCodeBlock = (language: string) => { const current = view(); if (current) insertAtSelection(current, `\n\`\`\`${language}\n在这里输入代码\n\`\`\`\n`) }
+  const insertCodeBlock = (language: string) => { const current = view(); if (current) insertAtSelection(current, `\n\`\`\`${language}\n${t('insert.codePlaceholder')}\n\`\`\`\n`) }
   const applyColor = (color: string) => {
     const current = view(); if (!current) return
     const range = current.state.selection.main
-    const text = current.state.sliceDoc(range.from, range.to) || '彩色文字'
+    const text = current.state.sliceDoc(range.from, range.to) || t('format.colorPlaceholder')
     insertAtSelection(current, `<span data-color="${color}">${text}</span>`)
   }
   const handleFile = useCallback(async (file?: File) => {
-    if (!file || !file.type.startsWith('image/')) { setNotice('请选择图片文件'); return }
-    if (live.current.readOnly) { setNotice('当前文档为只读模式'); return }
+    if (!file || !file.type.startsWith('image/')) { setNotice(translate(locale, 'notice.imageRequired', undefined, messages)); return }
+    if (live.current.readOnly) { setNotice(translate(locale, 'notice.readOnly', undefined, messages)); return }
     const current = view(); if (!current) return
     const selection = current.state.selection.main
     const start = Y.createRelativePositionFromTypeIndex(session.text, selection.from)
@@ -271,11 +287,11 @@ const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, Collaborativ
       current.dispatch({ changes: { from: resolvedStart.index, to: Math.max(resolvedStart.index, resolvedEnd.index), insert: markdown },
         selection: { anchor: resolvedStart.index + markdown.length } })
     }
-    catch (error) { if (!controller.signal.aborted && live.current.mounted) setNotice(error instanceof Error ? error.message : '图片上传失败') }
+    catch (error) { if (!controller.signal.aborted && live.current.mounted) setNotice(error instanceof Error ? error.message : translate(locale, 'notice.uploadFailed', undefined, messages)) }
     finally { if (live.current.mounted && uploadAbortRef.current === controller) {
       setUploading(false); if (fileRef.current) fileRef.current.value = ''
     } }
-  }, [effectiveReadOnly, onUploadProgress, resources, session.text, uploadImage])
+  }, [effectiveReadOnly, locale, messages, onUploadProgress, resources, session.text, uploadImage])
   useEffect(() => {
     live.current.mounted = true
     return () => {
@@ -286,8 +302,8 @@ const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, Collaborativ
   }, [])
   const download = () => {
     const markdown = session.text.toString(); const fileName = `${resolvedRoomId}.md`
-    if (onDownload) void Promise.resolve(onDownload(markdown, fileName)).catch(error => setNotice(error instanceof Error ? error.message : '下载失败'))
-    else downloadMarkdown(markdown, { fileName })
+    if (onDownload) void Promise.resolve(onDownload(markdown, fileName)).catch(error => setNotice(error instanceof Error ? error.message : t('notice.downloadFailed')))
+    else downloadMarkdown(markdown, { fileName, locale, messages })
   }
   useImperativeHandle(ref, () => createEditorHandle(view, session, () => live.current.readOnly || !live.current.mounted,
     revisionRef, selectionListenersRef.current, anchorClickListenersRef.current,
@@ -331,16 +347,16 @@ const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, Collaborativ
     refreshActions()
   }, [refreshActions])
   if (session.ready && initialEditorValueRef.current === undefined) initialEditorValueRef.current = session.text.toString()
-  return <div className={`exmd-editor app-shell ${className}`} style={{ height }}>
-    <Header title={title} roomId={resolvedRoomId} session={session} />
-    <EditorToolbar hostActions={hostActions} readOnly={effectiveReadOnly} mode={mode} onModeChange={setMode} onAction={runAction} onUndo={() => { if (!live.current.readOnly) session.undoManager.undo() }} onRedo={() => { if (!live.current.readOnly) session.undoManager.redo() }} onImage={() => { if (!live.current.readOnly) fileRef.current?.click() }} onDiagram={insertDiagram} onFormula={insertFormula} onCodeBlock={insertCodeBlock} onColor={applyColor} onDownload={download} />
-    {floating && portalDocument && actionRect && createPortal(<div className="exmd-selection-toolbar" role="toolbar" aria-label="选中文字操作"
+  return <div className={`exmd-editor app-shell ${className}`} style={{ height }} lang={editorLanguageTag(locale)}>
+    <Header title={title} roomId={resolvedRoomId} session={session} locale={locale} messages={messages} />
+    <EditorToolbar hostActions={hostActions} readOnly={effectiveReadOnly} mode={mode} onModeChange={setMode} onAction={runAction} onUndo={() => { if (!live.current.readOnly) session.undoManager.undo() }} onRedo={() => { if (!live.current.readOnly) session.undoManager.redo() }} onImage={() => { if (!live.current.readOnly) fileRef.current?.click() }} onDiagram={insertDiagram} onFormula={insertFormula} onCodeBlock={insertCodeBlock} onColor={applyColor} onDownload={download} locale={locale} messages={messages} />
+    {floating && portalDocument && actionRect && createPortal(<div className="exmd-selection-toolbar" role="toolbar" aria-label={t('selection.toolbar')}
       style={{ position: 'fixed', left: Math.max(8, Math.min(actionRect.left, portalDocument.documentElement.clientWidth - 180)),
         top: Math.max(8, actionRect.top - 42), zIndex: 1000 }}>
       <HostActions actions={selectionActions} context={actionContext} capture={captureAction} />
     </div>, portalDocument.body)}
     <input ref={fileRef} hidden type="file" accept="image/*" onChange={event => void handleFile(event.target.files?.[0])} />
-    {(uploading || notice) && <div className={notice ? 'notice error' : 'notice'}>{uploading ? '正在处理图片…' : notice}</div>}
+    {(uploading || notice) && <div className={notice ? 'notice error' : 'notice'}>{uploading ? t('notice.uploading') : notice}</div>}
     <main className={`workspace mode-${mode}`} onDragOver={event => { if (!effectiveReadOnly) event.preventDefault() }} onDrop={event => { if (effectiveReadOnly) return; const file = [...event.dataTransfer.files].find(item => item.type.startsWith('image/')); if (file) { event.preventDefault(); void handleFile(file) } }} onPaste={event => { if (effectiveReadOnly) return; const file = [...event.clipboardData.files].find(item => item.type.startsWith('image/')); if (file) { event.preventDefault(); void handleFile(file) } }}>
       <section ref={editorPaneRef} className="editor-pane" hidden={mode === 'preview'} onPointerDown={() => { activeView.current = 'source'; preview.clearSelection() }} onMouseDownCapture={event => {
         const current = editorRef.current?.view
@@ -348,19 +364,24 @@ const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, Collaborativ
           event.preventDefault()
           event.stopPropagation()
         }
-      }} aria-label="Markdown 编辑器"><div className="pane-label"><span>MARKDOWN</span><span>{value.length} 字符</span></div>{initialEditorValueRef.current !== undefined ? <StableCodeMirror ref={editorRef} onCreateEditor={onCreateEditor} value={initialEditorValueRef.current} extensions={extensions} editable={!effectiveReadOnly} readOnly={effectiveReadOnly} basicSetup={BASIC_SETUP} /> : <Loading state={session.state} errorMessage={session.error?.message} />}</section>
-      {mode !== 'edit' && <section ref={previewPaneRef} className="preview-pane" aria-busy={previewValue !== value} onPointerDown={() => { activeView.current = 'preview' }} aria-label="文档预览"><div className="pane-label"><span>预览</span><span>{previewValue !== value ? '预览更新中…' : syncScroll && mode === 'split' ? '同步滚动' : '实时渲染'}</span></div><Preview value={previewValue} resolveImageUrl={resources?.resolveUrl} interaction={preview} /></section>}
+      }} aria-label={t('editor.pane')}><div className="pane-label"><span>MARKDOWN</span><span>{t('editor.characters', { count: value.length })}</span></div>{initialEditorValueRef.current !== undefined ? <StableCodeMirror ref={editorRef} onCreateEditor={onCreateEditor} value={initialEditorValueRef.current} extensions={extensions} editable={!effectiveReadOnly} readOnly={effectiveReadOnly} basicSetup={BASIC_SETUP} /> : <Loading state={session.state} errorMessage={session.error ? collaborationErrorText(session.error, locale, messages) : undefined} locale={locale} messages={messages} />}</section>
+      {mode !== 'edit' && <section ref={previewPaneRef} className="preview-pane" aria-busy={previewValue !== value} onPointerDown={() => { activeView.current = 'preview' }} aria-label={t('preview.pane')}><div className="pane-label"><span>{t('preview.label')}</span><span>{previewValue !== value ? t('preview.updating') : syncScroll && mode === 'split' ? t('preview.syncScroll') : t('preview.live')}</span></div><Preview value={previewValue} resolveImageUrl={resources?.resolveUrl} interaction={preview} locale={locale} messages={messages} /></section>}
     </main>
-    <Footer readOnly={effectiveReadOnly} />
+    <Footer readOnly={effectiveReadOnly} locale={locale} messages={messages} />
   </div>
 })
 
-export function DefaultEditorHeader({ title, roomId, session }: EditorHeaderProps) {
-  const status = session.state === 'ready' ? <><Check /> 协同就绪</> : session.state === 'error' ? <><TriangleAlert /> 协同错误</> : session.state === 'disconnected' ? <><CloudOff /> 离线{session.ready ? '编辑' : ''}</> : <><LoaderCircle className="spin" /> {session.state === 'syncing' ? '同步文档中' : '加载文档中'}</>
-  return <header className="topbar"><div className="brand"><span className="brand-mark">墨</span><div><strong>{title}</strong><small>房间 · {roomId}</small></div></div><div className={`sync-state ${session.state}`}>{status}</div><div className="presence" aria-label={`${session.collaborators.length} 人在线`}><div className="avatars">{session.collaborators.slice(0, 4).map(item => <span key={item.clientId} title={item.name} style={{ background: item.color }}>{item.name.slice(0, 1)}</span>)}</div><span>{session.collaborators.length} 人在线</span></div></header>
+export function DefaultEditorHeader({ title, roomId, session, locale, messages }: EditorHeaderProps) {
+  const t = (key: string, values?: MessageValues) => translate(locale, key, values, messages)
+  const status = session.state === 'ready' ? <><Check /> {t('status.ready')}</> : session.state === 'error' ? <><TriangleAlert /> {t('status.error')}</> : session.state === 'disconnected' ? <><CloudOff /> {session.ready ? t('status.offlineEditing') : t('status.offline')}</> : <><LoaderCircle className="spin" /> {session.state === 'syncing' ? t('status.syncing') : t('status.loading')}</>
+  const online = t('presence.online', { count: session.collaborators.length })
+  return <header className="topbar"><div className="brand"><span className="brand-mark">墨</span><div><strong>{title}</strong><small>{t('header.room', { roomId })}</small></div></div><div className={`sync-state ${session.state}`}>{status}</div><div className="presence" aria-label={online}><div className="avatars">{session.collaborators.slice(0, 4).map(item => <span key={item.clientId} title={item.name} style={{ background: item.color }}>{item.name.slice(0, 1)}</span>)}</div><span>{online}</span></div></header>
 }
-export function DefaultEditorLoading({ errorMessage }: EditorLoadingProps) { return <div className="collaboration-loading">{errorMessage || '正在获取协作文档…'}</div> }
-export function DefaultEditorFooter({ readOnly }: EditorFooterProps) { return <footer><span>支持 CommonMark · GFM · Mermaid</span><span>{readOnly ? '只读模式' : '图片可直接拖入或粘贴'}</span></footer> }
+export function DefaultEditorLoading({ errorMessage, locale, messages }: EditorLoadingProps) { return <div className="collaboration-loading">{errorMessage || translate(locale, 'loading.document', undefined, messages)}</div> }
+export function DefaultEditorFooter({ readOnly, locale, messages }: EditorFooterProps) {
+  const t = (key: string) => translate(locale, key, undefined, messages)
+  return <footer><span>{t('footer.formats')}</span><span>{readOnly ? t('footer.readOnly') : t('footer.dropImages')}</span></footer>
+}
 
 function createEditorHandle(view: () => EditorView | undefined, session: CollaborationSession, isReadOnly: () => boolean,
   revision: { current: number }, selectionListeners: Set<(selection: MarkdownTextSelection | null) => void>,

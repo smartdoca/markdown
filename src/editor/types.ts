@@ -21,6 +21,9 @@ export interface CollaborationOptions {
   readOnly?: boolean
   /** Disable the built-in transport when a host-managed session is injected. */
   enabled?: boolean
+  /** Display language for package chrome such as the anonymous presence label. Does not reconnect. */
+  locale?: string
+  messages?: import('./i18n').EditorMessages
 }
 
 export interface CollaborationSession {

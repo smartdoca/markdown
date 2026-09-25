@@ -26,14 +26,14 @@ const annotationState = StateField.define<AnnotationState>({
 })
 
 class RemoteCaret extends WidgetType {
-  constructor(readonly sessionId: string, readonly name: string, readonly color: string) { super() }
-  eq(other: RemoteCaret) { return this.sessionId === other.sessionId && this.name === other.name && this.color === other.color }
+  constructor(readonly sessionId: string, readonly name: string, readonly color: string, readonly label: string) { super() }
+  eq(other: RemoteCaret) { return this.sessionId === other.sessionId && this.name === other.name && this.color === other.color && this.label === other.label }
   toDOM() {
     const caret = document.createElement('span')
     caret.className = 'exmd-remote-caret'
     caret.dataset.sessionId = this.sessionId
     caret.style.setProperty('--exmd-selection-color', this.color)
-    caret.setAttribute('aria-label', this.name + ' 的光标')
+    caret.setAttribute('aria-label', this.label)
     const label = caret.appendChild(document.createElement('span'))
     label.className = 'exmd-remote-label'
     label.textContent = this.name
@@ -46,6 +46,7 @@ class RemoteCaret extends WidgetType {
 export function createAnnotationsExtension(text: Y.Text, runtime: {
   showRemote(): boolean
   onAnchorClick(id: string): void
+  cursorLabel?(name: string): string
 }) {
   const render = (view: EditorView): DecorationSet => {
     const doc = text.doc
@@ -64,7 +65,7 @@ export function createAnnotationsExtension(text: Y.Text, runtime: {
           class: 'exmd-remote-selection', attributes: { 'data-session-id': item.sessionId,
             style: '--exmd-selection-color:' + color },
         }).range(from, to))
-        ranges.push(Decoration.widget({ widget: new RemoteCaret(item.sessionId, item.name, color), side: 1 }).range(points.focus))
+        ranges.push(Decoration.widget({ widget: new RemoteCaret(item.sessionId, item.name, color, runtime.cursorLabel?.(item.name) || `${item.name} 的光标`), side: 1 }).range(points.focus))
       }
     }
     for (const item of state.comments) {

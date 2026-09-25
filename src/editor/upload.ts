@@ -1,3 +1,5 @@
+import { translate, type EditorMessages } from './i18n'
+
 export interface UploadImageOptions {
   endpoint: string
   fieldName?: string
@@ -6,6 +8,8 @@ export interface UploadImageOptions {
   credentials?: RequestCredentials
   /** Convert a custom server response into the public image URL. */
   resolveUrl?: (response: unknown) => string | Promise<string>
+  locale?: string
+  messages?: EditorMessages
 }
 
 export async function uploadImageToEndpoint(file: File, endpointOrOptions?: string | UploadImageOptions): Promise<string> {
@@ -15,25 +19,25 @@ export async function uploadImageToEndpoint(file: File, endpointOrOptions?: stri
     body.append(options.fieldName || 'file', file)
     const response = await fetch(options.endpoint, { method: 'POST', body, headers: options.headers,
       signal: options.signal, credentials: options.credentials })
-    if (!response.ok) throw new Error(`上传失败（${response.status}）`)
+    if (!response.ok) throw new Error(translate(options.locale, 'upload.failed', { status: response.status }, options.messages))
     const result: unknown = await response.json()
     const url = options.resolveUrl ? await options.resolveUrl(result) : (result as { url?: string })?.url
-    if (!url) throw new Error('上传接口未返回图片地址')
+    if (!url) throw new Error(translate(options.locale, 'upload.missingUrl', undefined, options.messages))
     return url
   }
   return imageToDataUrl(file)
 }
 
-export function imageToDataUrl(file: File): Promise<string> {
+export function imageToDataUrl(file: File, options: { locale?: string; messages?: EditorMessages } = {}): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(new Error('读取图片失败'))
+    reader.onerror = () => reject(new Error(translate(options.locale, 'upload.readFailed', undefined, options.messages)))
     reader.readAsDataURL(file)
   })
 }
 
-export interface DownloadMarkdownOptions { fileName?: string; mimeType?: string }
+export interface DownloadMarkdownOptions { fileName?: string; mimeType?: string; locale?: string; messages?: EditorMessages }
 
 export function createMarkdownFile(markdown: string, options: DownloadMarkdownOptions = {}): File {
   // Blob otherwise silently turns lone UTF-16 surrogates into U+FFFD.
@@ -41,8 +45,8 @@ export function createMarkdownFile(markdown: string, options: DownloadMarkdownOp
     const unit = markdown.charCodeAt(i)
     if (unit >= 0xd800 && unit <= 0xdbff) {
       const next = markdown.charCodeAt(++i)
-      if (!(next >= 0xdc00 && next <= 0xdfff)) throw new TypeError('Markdown 包含孤立 UTF-16 代理字符，无法无损导出为 UTF-8')
-    } else if (unit >= 0xdc00 && unit <= 0xdfff) throw new TypeError('Markdown 包含孤立 UTF-16 代理字符，无法无损导出为 UTF-8')
+      if (!(next >= 0xdc00 && next <= 0xdfff)) throw new TypeError(translate(options.locale, 'validation.loneSurrogate', undefined, options.messages))
+    } else if (unit >= 0xdc00 && unit <= 0xdfff) throw new TypeError(translate(options.locale, 'validation.loneSurrogate', undefined, options.messages))
   }
   return new File([markdown], normalizeMarkdownFileName(options.fileName || 'document.md'),
     { type: options.mimeType || 'text/markdown;charset=utf-8' })
