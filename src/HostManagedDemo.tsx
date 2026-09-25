@@ -14,7 +14,7 @@ function createServerBaseline(): CollaborationSession {
   return createHostMarkdownSession({ doc, epochId: 'demo-epoch', state: 'ready', ready: true, saveState: 'clean' })
 }
 
-export function HostManagedDemo({ readOnly = false }: { readOnly?: boolean }) {
+export function HostManagedDemo({ readOnly = false, locale }: { readOnly?: boolean; locale?: string }) {
   const [modeReadOnly, setModeReadOnly] = useState(readOnly)
   const [session, setSession] = useState(createServerBaseline)
   const [assets] = useState(() => new Map<string, string>())
@@ -61,7 +61,7 @@ export function HostManagedDemo({ readOnly = false }: { readOnly?: boolean }) {
     {modeReadOnly ? '切换为可编辑' : '切换为只读'}
   </button><CollaborativeMarkdownEditor ref={editorRef} roomId="doca-host-demo" collaboration={session}
     selectionActions={actions} selectionToolbar={false}
-    mode={modeReadOnly ? 'readonly' : 'edit'} resources={resources} title="Doca Host Demo" /></div>
+    mode={modeReadOnly ? 'readonly' : 'edit'} resources={resources} title="Doca Host Demo" locale={locale} /></div>
     <aside aria-label="宿主评论卡片" style={{ padding: 16, background: '#fffdf6', overflow: 'auto', height: '100vh' }}>
       <h3>宿主评论</h3><p>正文只读时仍可评论。此演示的评论仅存内存，不会发送网络请求。</p>
       <button onClick={() => setActiveComment(null)}>取消激活</button>

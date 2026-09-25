@@ -8,6 +8,7 @@ import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import { MermaidDiagram } from './MermaidDiagram'
 import { CodeBlock } from './CodeBlock'
 import { createPreviewMapping } from '../editor/preview-mapping'
+import type { EditorMessages } from '../editor/i18n'
 import type { MarkdownPreviewInteraction } from '../editor/preview-interaction'
 
 const colorSchema = {
@@ -23,13 +24,6 @@ const baseComponents: ComponentProps<typeof Markdown>['components'] = {
     return <span {...props} style={safeColor ? { color: safeColor } : undefined}>{children}</span>
   },
   pre: ({ children, node }) => <div data-exmd-source-line={node?.position?.start.line} data-exmd-source-end-line={node?.position?.end.line}>{children}</div>,
-  code: ({ className, children, ...props }) => {
-    const match = /language-([\w-]+)/.exec(className || '')
-    const code = String(children)
-    if (match?.[1] === 'mermaid') return <MermaidDiagram code={code.replace(/\n$/, '')} />
-    if (match) return <CodeBlock code={code} language={match[1]} />
-    return <code className={className} {...props}>{children}</code>
-  },
 }
 
 export interface MarkdownPreviewProps {
@@ -37,9 +31,11 @@ export interface MarkdownPreviewProps {
   resolveImageUrl?: (path: string) => string | Promise<string>
   /** Forward unchanged from a custom Preview wrapper to retain precise selection/comment support. */
   interaction?: MarkdownPreviewInteraction
+  locale?: string
+  messages?: EditorMessages
 }
 
-export const MarkdownPreview = memo(function MarkdownPreview({ value, resolveImageUrl, interaction }: MarkdownPreviewProps) {
+export const MarkdownPreview = memo(function MarkdownPreview({ value, resolveImageUrl, interaction, locale, messages }: MarkdownPreviewProps) {
   const root = useRef<HTMLElement>(null)
   const projection = useMemo(() => interaction ? createPreviewMapping(value) : null, [value, interaction])
   useLayoutEffect(() => {
@@ -47,8 +43,15 @@ export const MarkdownPreview = memo(function MarkdownPreview({ value, resolveIma
   }, [projection, interaction])
   const components = useMemo<ComponentProps<typeof Markdown>['components']>(() => ({
     ...baseComponents,
+    code: ({ className, children, ...props }) => {
+      const match = /language-([\w-]+)/.exec(className || '')
+      const code = String(children)
+      if (match?.[1] === 'mermaid') return <MermaidDiagram code={code.replace(/\n$/, '')} locale={locale} messages={messages} />
+      if (match) return <CodeBlock code={code} language={match[1]} />
+      return <code className={className} {...props}>{children}</code>
+    },
     img: ({ alt, src, ...props }) => <ResolvedImage {...props} alt={alt || ''} path={src || ''} resolveUrl={resolveImageUrl} />,
-  }), [resolveImageUrl])
+  }), [resolveImageUrl, locale, messages])
   return <article ref={root} className="markdown-body">
     <Markdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[
       ...(projection ? [projection.beforeRaw] : []),

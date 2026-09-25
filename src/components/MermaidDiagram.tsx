@@ -1,12 +1,13 @@
 import { memo, useEffect, useId, useState } from 'react'
+import { translate, type EditorMessages } from '../editor/i18n'
 
 let initialized = false
 
-export interface MermaidDiagramProps { code: string }
-export const MermaidDiagram = memo(function MermaidDiagram({ code }: MermaidDiagramProps) {
+export interface MermaidDiagramProps { code: string; locale?: string; messages?: EditorMessages }
+export const MermaidDiagram = memo(function MermaidDiagram({ code, locale, messages }: MermaidDiagramProps) {
   const reactId = useId().replace(/:/g, '')
   const [svg, setSvg] = useState('')
-  const [error, setError] = useState('')
+  const [failed, setFailed] = useState(false)
   useEffect(() => {
     let active = true
     const id = `mermaid-${reactId}-${Date.now()}`
@@ -16,10 +17,10 @@ export const MermaidDiagram = memo(function MermaidDiagram({ code }: MermaidDiag
         initialized = true
       }
       return mermaid.render(id, code)
-    }).then(({ svg: result }) => { if (active) { setSvg(result); setError('') } })
-      .catch(() => { if (active) { setSvg(''); setError('流程图语法有误，请检查 Mermaid 代码。') } })
+    }).then(({ svg: result }) => { if (active) { setSvg(result); setFailed(false) } })
+      .catch(() => { if (active) { setSvg(''); setFailed(true) } })
     return () => { active = false }
   }, [code, reactId])
-  if (error) return <div className="diagram-error">{error}</div>
+  if (failed) return <div className="diagram-error">{translate(locale, 'diagram.syntaxError', undefined, messages)}</div>
   return <div className="mermaid-diagram" dangerouslySetInnerHTML={{ __html: svg }} />
 })

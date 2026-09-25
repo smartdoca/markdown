@@ -38,3 +38,5 @@ export type { SerializedRelativePosition, MarkdownTextSelection, MarkdownTextAnc
   ResolvedTextRange, RemoteMarkdownSelection, MarkdownCommentAnchor } from '../editor/selection'
 export type { CollaborationOptions, CollaborationSession, CollaborationUser, Collaborator,
   CollaborationError, CollaborationErrorCode, ConnectionState, SaveState, ViewMode } from '../editor/types'
+export { translate, resolveEditorLocale, editorLanguageTag } from '../editor/i18n'
+export type { EditorMessages, MessageValues } from '../editor/i18n'

@@ -113,7 +113,9 @@ PDF 导入/导出不会创建文档、写入协同状态、改变正文、撤销
 | `resources` | `EditorResources` | - | 宿主管理的上传和资产 URL 解析回调 |
 | `onUploadProgress` | `(percent: number) => void` | - | 上传进度通知 |
 | `onDownload` | `(markdown, fileName) => void \| Promise<void>` | 兼容回调 | 仅供自定义 Toolbar 调用；内置工具栏不再显示下载按钮。新宿主使用 `exportMarkdownFile` 接管下载 |
-| `title` | `string` | `'协作文档'` | 标题 |
+| `title` | `string` | 随 `locale` | 未传入时中文为「协作文档」，英文为 “Collaborative document”。传入后按原文显示，不翻译 |
+| `locale` | `string` | `'zh'` | 界面语言。只认 `zh` 和 `en`；缺省为中文，其他值显示英文。切换时只更新按钮、菜单、占位符和提示，不重建文档、Y.Doc、协同连接或插件 |
+| `messages` | `Record<string, string>` | - | 按 key 覆盖个别界面文案，其余仍用内置译文。数量文案使用 `key.one` / `key.other` |
 | `height` | `string \| number` | `'100vh'` | 编辑器整体高度 |
 | `className` | `string` | `''` | 根节点 class |
 | `components` | `CollaborativeMarkdownEditorComponents` | `{}` | 自定义区域组件 |

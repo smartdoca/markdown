@@ -35,6 +35,7 @@
     "test:idle": "yarn build:lib && node --test tests/idle.test.mjs",
     "test:files": "yarn build:lib && node --test tests/markdown-file.test.mjs",
     "test:pdf": "yarn build:lib && node --test tests/pdf-file.test.mjs",
+    "test:i18n": "node --experimental-strip-types --test tests/i18n.test.mjs",
     "test:browser": "yarn build:lib && vite --host 127.0.0.1 --port 5198 --strictPort --open /tests/browser/index.html",
     "preview": "vite preview"
   },
