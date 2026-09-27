@@ -7,8 +7,7 @@ export interface MarkdownTextSelection {
   focus: SerializedRelativePosition
 }
 export interface MarkdownTextAnchor {
-  /** v2 excludes insertions at both boundaries; v1 is resolved with its original affinities. */
-  kind: 'markdown-text-range-v1' | 'markdown-text-range-v2'
+  kind: 'markdown-text-range'
   start: SerializedRelativePosition
   end: SerializedRelativePosition
   /** Original character identities. Full deletion remains orphaned even if undo inserts replacement identities. */
@@ -60,14 +59,14 @@ export function resolveMarkdownSelectionPoints(doc: Y.Doc, text: Y.Text, selecti
 export function createMarkdownTextAnchor(text: Y.Text, from: number, to: number): MarkdownTextAnchor {
   validIndex(text, from); validIndex(text, to)
   if (from >= to) throw new RangeError('A comment anchor requires a nonempty forward range')
-  return { kind: 'markdown-text-range-v2',
+  return { kind: 'markdown-text-range',
     start: serialize(Y.createRelativePositionFromTypeIndex(text, from, 0)),
     end: serialize(Y.createRelativePositionFromTypeIndex(text, to, -1)),
     content: captureContentIdentity(text, from, to) }
 }
 export function resolveMarkdownTextAnchor(doc: Y.Doc, text: Y.Text, anchor: MarkdownTextAnchor): ResolvedTextRange | null {
-  if (!anchor || !['markdown-text-range-v1', 'markdown-text-range-v2'].includes(anchor.kind)) return null
-  if (anchor.kind === 'markdown-text-range-v2' && (!Array.isArray(anchor.content) || !anchor.content.length)) return null
+  if (!anchor || anchor.kind !== 'markdown-text-range') return null
+  if (!Array.isArray(anchor.content) || !anchor.content.length) return null
   if (anchor.content && (!Array.isArray(anchor.content) || anchor.content.some(span => !span
     || !Number.isSafeInteger(span.client) || span.client < 0 || !Number.isSafeInteger(span.clock) || span.clock < 0
     || !Number.isSafeInteger(span.length) || span.length <= 0))) return null

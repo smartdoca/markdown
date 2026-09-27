@@ -17,7 +17,7 @@ import { usePreviewValue } from '../editor/use-preview-value'
 import { bindCenterScroll } from '../editor/scroll-sync'
 import { applyMarkdownAction, insertAtSelection, type MarkdownAction } from '../editor/commands'
 import { useCollaboration } from '../editor/collaboration'
-import { downloadMarkdown, imageToDataUrl } from '../editor/upload'
+import { imageToDataUrl } from '../editor/upload'
 import type { CollaborationSession, CollaborationUser, ConnectionState, ViewMode } from '../editor/types'
 import type { ToolbarProps } from '../components/Toolbar'
 import type { MarkdownPreviewProps } from '../components/MarkdownPreview'
@@ -58,13 +58,10 @@ export interface CollaborativeMarkdownEditorProps {
   syncScroll?: boolean
   /** Preview-only debounce; auto: 150ms for >=10k UTF-16 units or >=500 lines, otherwise 0. */
   previewDebounceMs?: number
-  readOnly?: boolean
-  /** Preferred permission surface. `readOnly` remains as a compatibility alias. */
   mode?: EditorMode
   /** Host-owned asset callbacks. Keep this object reference stable for the document session. */
   resources?: EditorResources
   onUploadProgress?: (percent: number) => void
-  onDownload?: (markdown: string, suggestedFileName: string) => void | Promise<void>
   onChange?: (markdown: string) => void
   onConnectionChange?: (state: ConnectionState) => void
   /** Replace individual UI regions while retaining the built-in Yjs/editor lifecycle. */
@@ -90,7 +87,7 @@ export const CollaborativeMarkdownEditor = forwardRef<CollaborativeMarkdownEdito
 const StandaloneEditor = forwardRef<CollaborativeMarkdownEditorHandle, CollaborativeMarkdownEditorProps>(function Standalone(props, ref) {
   const session = useCollaboration({ roomId: props.roomId!, websocketUrl: props.websocketUrl!,
     initialValue: props.initialValue, user: props.user, persistence: props.persistence,
-    persistenceKey: props.persistenceKey, readOnly: props.mode ? props.mode === 'readonly' : props.readOnly,
+    persistenceKey: props.persistenceKey, readOnly: props.mode === 'readonly',
     locale: props.locale, messages: props.messages })
   return <EditorSurface {...props} collaboration={session} standalone ref={ref} />
 })
@@ -100,8 +97,8 @@ const StableCodeMirror = memo(CodeMirror)
 
 const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, CollaborativeMarkdownEditorProps & { standalone?: boolean }>(function EditorSurface({ roomId, collaboration,
   uploadImage: uploadImageProp, defaultViewMode = 'split',
-  title: titleProp, className = '', height = '100vh', syncScroll = true, previewDebounceMs, readOnly = false, mode: editorMode,
-  resources, onUploadProgress, onDownload, onChange, onConnectionChange, components = {}, standalone = false,
+  title: titleProp, className = '', height = '100vh', syncScroll = true, previewDebounceMs, mode: editorMode = 'edit',
+  resources, onUploadProgress, onChange, onConnectionChange, components = {}, standalone = false,
   selectionActions = [], selectionToolbar = true, toolbarActions = [], locale, messages,
 }, ref) {
   const t = (key: string, values?: MessageValues) => translate(locale, key, values, messages)
@@ -112,7 +109,7 @@ const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, Collaborativ
   localeRef.current = locale
   messagesRef.current = messages
   const session = collaboration!
-  const effectiveReadOnly = (editorMode ? editorMode === 'readonly' : readOnly) || !session.ready || session.state === 'error'
+  const effectiveReadOnly = editorMode === 'readonly' || !session.ready || session.state === 'error'
   const resolvedRoomId = roomId || 'document'
   const editorRef = useRef<ReactCodeMirrorRef>(null)
   const editorPaneRef = useRef<HTMLElement>(null)
@@ -300,11 +297,6 @@ const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, Collaborativ
       selectionListenersRef.current.forEach(listener => listener(null))
     }
   }, [])
-  const download = () => {
-    const markdown = session.text.toString(); const fileName = `${resolvedRoomId}.md`
-    if (onDownload) void Promise.resolve(onDownload(markdown, fileName)).catch(error => setNotice(error instanceof Error ? error.message : t('notice.downloadFailed')))
-    else downloadMarkdown(markdown, { fileName, locale, messages })
-  }
   useImperativeHandle(ref, () => createEditorHandle(view, session, () => live.current.readOnly || !live.current.mounted,
     revisionRef, selectionListenersRef.current, anchorClickListenersRef.current,
     () => { activeView.current = 'source'; if (live.current.mode === 'preview') setMode('split') }, {
@@ -349,7 +341,7 @@ const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, Collaborativ
   if (session.ready && initialEditorValueRef.current === undefined) initialEditorValueRef.current = session.text.toString()
   return <div className={`exmd-editor app-shell ${className}`} style={{ height }} lang={editorLanguageTag(locale)}>
     <Header title={title} roomId={resolvedRoomId} session={session} locale={locale} messages={messages} />
-    <EditorToolbar hostActions={hostActions} readOnly={effectiveReadOnly} mode={mode} onModeChange={setMode} onAction={runAction} onUndo={() => { if (!live.current.readOnly) session.undoManager.undo() }} onRedo={() => { if (!live.current.readOnly) session.undoManager.redo() }} onImage={() => { if (!live.current.readOnly) fileRef.current?.click() }} onDiagram={insertDiagram} onFormula={insertFormula} onCodeBlock={insertCodeBlock} onColor={applyColor} onDownload={download} locale={locale} messages={messages} />
+    <EditorToolbar hostActions={hostActions} readOnly={effectiveReadOnly} mode={mode} onModeChange={setMode} onAction={runAction} onUndo={() => { if (!live.current.readOnly) session.undoManager.undo() }} onRedo={() => { if (!live.current.readOnly) session.undoManager.redo() }} onImage={() => { if (!live.current.readOnly) fileRef.current?.click() }} onDiagram={insertDiagram} onFormula={insertFormula} onCodeBlock={insertCodeBlock} onColor={applyColor} locale={locale} messages={messages} />
     {floating && portalDocument && actionRect && createPortal(<div className="exmd-selection-toolbar" role="toolbar" aria-label={t('selection.toolbar')}
       style={{ position: 'fixed', left: Math.max(8, Math.min(actionRect.left, portalDocument.documentElement.clientWidth - 180)),
         top: Math.max(8, actionRect.top - 42), zIndex: 1000 }}>

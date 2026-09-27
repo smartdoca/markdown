@@ -51,13 +51,12 @@ export interface LocalMarkdownUpdate {
   transaction: Y.Transaction
 }
 
-/** Only editor-local正文 transactions pass this filter; bootstrap, migration and remote apply do not. */
+/** Only editor-local正文 transactions pass this filter; bootstrap and remote apply do not. */
 export function observeLocalMarkdownUpdates(session: Pick<CollaborationSession, 'doc' | 'text'>,
   listener: (event: LocalMarkdownUpdate) => void): () => void {
   const handle = (update: Uint8Array, origin: unknown, _doc: Y.Doc, transaction: Y.Transaction) => {
     const changesMarkdown = Array.from(transaction.changedParentTypes.keys()).some(type => Object.is(type, session.text))
-    if (!transaction.local || origin === TRANSACTION_ORIGINS.bootstrap || origin === TRANSACTION_ORIGINS.migration
-      || origin === TRANSACTION_ORIGINS.remote || !changesMarkdown) return
+    if (!transaction.local || origin === TRANSACTION_ORIGINS.bootstrap || origin === TRANSACTION_ORIGINS.remote || !changesMarkdown) return
     listener({ update, origin, transaction })
   }
   session.doc.on('update', handle)
@@ -80,6 +79,6 @@ export const MARKDOWN_HOST_CAPABILITIES = Object.freeze({
   previewTextAnchors: true,
   previewCommentDecorations: true,
   hostSelectionActions: true,
-  anchorVersion: 2,
+  anchorKind: 'markdown-text-range',
   anchorBoundary: 'exclude-both',
 })

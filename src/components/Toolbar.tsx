@@ -16,8 +16,6 @@ export interface ToolbarProps {
   onFormula: () => void
   onCodeBlock: (language: string) => void
   onColor: (color: string) => void
-  /** Compatibility callback for custom toolbars. The built-in toolbar has no download button. */
-  onDownload: () => void
   /** Host actions retain native selection and have permissions separate from readOnly. */
   hostActions?: ReactNode
   /** `zh` or `en`. Omitted stays Chinese. Unknown codes display English. */
