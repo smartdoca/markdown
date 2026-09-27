@@ -7,7 +7,7 @@ export const MARKDOWN_TEXT_KEY = 'markdown'
 export const MARKDOWN_META_KEY = 'exmd:meta'
 
 export const TRANSACTION_ORIGINS = {
-  bootstrap: Symbol('exmd.bootstrap'), migration: Symbol('exmd.migration'), remote: Symbol('exmd.remote'),
+  bootstrap: Symbol('exmd.bootstrap'), remote: Symbol('exmd.remote'),
 } as const
 
 export interface MarkdownDocumentMetadata { codec: typeof MARKDOWN_CODEC; schemaVersion: typeof MARKDOWN_SCHEMA_VERSION }
@@ -27,7 +27,7 @@ export function initializeMarkdownDocument(doc: Y.Doc, initialValue: string): vo
 }
 export function assertSupportedMarkdownDocument(doc: Y.Doc): void {
   const metadata = readMarkdownMetadata(doc)
-  if (metadata.codec && metadata.codec !== MARKDOWN_CODEC) throw new Error(`Unsupported codec: ${metadata.codec}`)
-  if (metadata.schemaVersion && metadata.schemaVersion !== MARKDOWN_SCHEMA_VERSION) throw new Error(`Unsupported schema version: ${metadata.schemaVersion}`)
+  if (metadata.codec !== MARKDOWN_CODEC) throw new Error(`Unsupported codec: ${metadata.codec}`)
+  if (metadata.schemaVersion !== MARKDOWN_SCHEMA_VERSION) throw new Error(`Unsupported schema version: ${metadata.schemaVersion}`)
 }
 export function encodeMarkdownCheckpoint(doc: Y.Doc): Uint8Array { return Y.encodeStateAsUpdate(doc) }

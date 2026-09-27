@@ -37,14 +37,15 @@ test('host session uses the fixed markdown root and creates no transport or stor
   } finally { globalThis.WebSocket = previous }
 })
 
-test('host session never initializes an empty document or writes initialValue', () => {
+test('host session rejects an uninitialized document without writing it', () => {
   const doc = new Y.Doc()
   let writes = 0
   doc.on('update', () => { writes += 1 })
-  const current = createHostMarkdownSession({ doc, state: 'loading', ready: false, saveState: 'unavailable' })
-  assert.equal(current.text.toString(), '')
+  assert.throws(
+    () => createHostMarkdownSession({ doc, state: 'loading', ready: false, saveState: 'unavailable' }),
+    /Unsupported codec/,
+  )
   assert.equal(writes, 0)
-  current.dispose?.()
 })
 
 test('status/save/profile snapshots retain all model instances', () => {
@@ -141,10 +142,10 @@ test('undo uses the same Y.Text model transaction', () => {
   current.dispose?.()
 })
 
-test('v2 comment anchors exclude both boundaries, include internal edits and orphan after full deletion', () => {
+test('comment anchors exclude both boundaries, include internal edits and orphan after full deletion', () => {
   const current = session(documentWith('abc'))
   const anchor = createMarkdownTextAnchor(current.text, 0, 3)
-  assert.equal(anchor.kind, 'markdown-text-range-v2')
+  assert.equal(anchor.kind, 'markdown-text-range')
   current.text.insert(3, 'END')
   current.text.insert(0, 'START')
   assert.deepEqual(resolveMarkdownTextAnchor(current.doc, current.text, anchor), { from: 5, to: 8 })
@@ -170,7 +171,7 @@ test('malformed/collapsed anchors fail safely without writing the model', () => 
   assert.equal(resolveMarkdownTextAnchor(current.doc, current.text, { ...valid, content: [null] }), null)
   assert.equal(resolveMarkdownTextAnchor(current.doc, current.text, { ...valid, content: undefined }), null)
   assert.equal(resolveMarkdownTextAnchor(current.doc, current.text, {
-    kind: 'markdown-text-range-v2', start: { bytes: [255] }, end: { bytes: [] },
+    kind: 'markdown-text-range', start: { bytes: [255] }, end: { bytes: [] },
   }), null)
   assert.equal(current.text.toString(), 'abc')
   current.dispose()

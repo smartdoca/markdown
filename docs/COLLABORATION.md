@@ -6,7 +6,7 @@
 
 - `protocolVersion`、Markdown `codec/schemaVersion` 与业务版本概念分离。
 - 首次编辑器挂载前先等待 IndexedDB 或服务端 Yjs 基线，避免空文档短暂覆盖真实内容。
-- 初始化、迁移与远端事务具有独立 origin；初始化只在同步基线完成后执行。
+- 初始化与远端事务具有独立 origin；初始化只在同步基线完成后执行。
 - 只读模式关闭编辑能力，也不发布本地用户、光标和选区 presence。
 - 连接状态使用 `loading/syncing/ready/disconnected/error`；WebSocket 在线只表示协同链路就绪，不表示数据库已经保存。
 - 提供显式 checkpoint 编码边界，Markdown 字符串只是投影，不作为协同真相源。
