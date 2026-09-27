@@ -1,43 +1,63 @@
-# exmd-collaborative-editor
+# @smartdoca/markdown
 
-基于 React、CodeMirror 6 和 Yjs 的 Markdown 编辑器，面向 Doca 的宿主托管协同场景。
+[中文](README.zh-CN.md)
 
-## 使用
+Embeddable collaborative Markdown editor for React. It renders GFM, code, math, Mermaid, and a split preview. The host owns identity, files, permissions, and the durable save path.
+
+Licensed under [AGPL-3.0-only](LICENSE).
+
+## Install
+
+```sh
+npm install @smartdoca/markdown react react-dom yjs
+```
 
 ```tsx
-import { CollaborativeMarkdownEditor } from 'exmd-collaborative-editor'
-import 'exmd-collaborative-editor/style.css'
+import { CollaborativeMarkdownEditor } from "@smartdoca/markdown";
+import "@smartdoca/markdown/style.css";
 
-export function MarkdownDocument({ session, canEdit }) {
-  return (
-    <CollaborativeMarkdownEditor
-      collaboration={session}
-      mode={canEdit ? 'edit' : 'readonly'}
-    />
-  )
+export function Markdown({ markdown }: { markdown: string }) {
+  return <CollaborativeMarkdownEditor initialValue={markdown} mode="edit" height="100%" />;
 }
 ```
 
-`mode` 是唯一权限入口。宿主可用 `components` 替换 UI 区域，用 `selectionActions` 和 `toolbarActions` 增加业务动作，用 `messages` 覆盖稳定国际化键。
+A host-managed session replaces `roomId` and `websocketUrl`. Without `collaboration`, both `roomId` and `websocketUrl` are required.
 
-## 协同边界
+## Props
 
-宿主创建并拥有 `CollaborationSession`、Y.Doc、Awareness、连接、认证、ACK、outbox、checkpoint 和重连。编辑器不会在宿主模式下创建额外的 Y.Doc、WebSocket 或 IndexedDB。
+`CollaborativeMarkdownEditor` accepts `CollaborativeMarkdownEditorProps`.
 
-Markdown 正文固定存放在 `Y.Text("markdown")`。远端 update 不进入本地 update 回调；只读会话不发布本地正文、光标或选区。评论锚点使用 Yjs relative position，正文和 ACL 仍由 Doca 保存。
+| Prop | Type | Role |
+|---|---|---|
+| `collaboration` | `CollaborationSession` | Stable host session. When set, the package does not open its own WebSocket or IndexedDB transport. |
+| `roomId` | `string` | Demo transport room. Required only without `collaboration`. |
+| `websocketUrl` | `string` | Demo transport URL. Required only without `collaboration`. |
+| `initialValue` | `string` | Markdown used when the session starts. |
+| `user` | `CollaborationUser` | Display identity for the built-in transport. |
+| `mode` | `EditorMode` | `readonly` stops editing. |
+| `resources` | `EditorResources` | Host asset callbacks. Keep the object reference stable for the session. |
+| `uploadImage` | `(file) => Promise<string>` | Image upload. Defaults to a data URL. |
+| `onChange` | `(markdown) => void` | Local markdown text. |
+| `onConnectionChange` | `(state) => void` | Connection state. |
+| `selectionActions` | `MarkdownSelectionAction[]` | Actions near a valid selection, or in the toolbar as fallback. |
+| `selectionToolbar` | `boolean` | Floating actions. Defaults to `true`. `false` keeps actions in the top toolbar. |
+| `toolbarActions` | `MarkdownSelectionAction[]` | Actions always shown in the top toolbar. |
+| `components` | `CollaborativeMarkdownEditorComponents` | Replaces header, loading, or footer without replacing the Yjs lifecycle. |
+| `defaultViewMode` | `ViewMode` | Initial editor, preview, or split view. |
+| `syncScroll` | `boolean` | Scrolls the preview with the editor. Defaults to `true`. |
+| `previewDebounceMs` | `number` | Preview debounce. Automatic timing is 150ms for large documents, otherwise 0. |
+| `locale` | `string` | `zh` or `en`. Omitted stays Chinese. Unknown codes show English. Switching updates chrome only. |
+| `messages` | `EditorMessages` | Replaces individual catalog entries. |
+| `title`, `className`, `height` | | Chrome and layout. `height` defaults to `100vh`. |
+| `persistence`, `persistenceKey` | | Built-in IndexedDB for the demo transport. Leave them off for a host session. |
 
-资源上传与短期 URL 解析由 `resources` 注入。模型只保存稳定资源标识，不保存 Cookie、签名 URL 或部署域名。
+## Collaboration
 
-## 文件交换
+Give the host `collaboration` session to the editor and keep that object for the life of the document.
 
-Markdown 导入导出严格使用 UTF-8，不主动下载、不访问网络、不修改当前协作文档。PDF 导入只提取可验证的文本内容；文件交换结果由宿主决定是否创建新文档。
+- Local text updates are observed from the session. Remote updates are applied to the same `Y.Doc`. Do not echo remote text into a second save request.
+- `mode="readonly"` does not publish edits.
+- Selection actions and comment ranges use `resolveMarkdownTextAnchor`. Anchors are text positions, not screen coordinates.
+- `locale` and `messages` change interface copy only.
 
-## 开发
-
-```bash
-yarn typecheck
-yarn build:lib
-yarn test:contract
-yarn test:files
-yarn test:i18n
-```
+Other entry points on the package root include `MarkdownPreview`, `importMarkdownFile`, `exportMarkdownFile`, `importPdfFile`, and `exportPdfFile`.
