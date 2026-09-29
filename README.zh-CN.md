@@ -4,7 +4,7 @@
 
 可嵌入的 React 协同 Markdown 编辑器。支持 GFM、代码、数学公式、Mermaid 和分屏预览。宿主负责身份、文件、权限和持久保存。
 
-许可证为 [AGPL-3.0-only](LICENSE)。
+许可证为 [MIT](LICENSE)。
 
 ## 安装
 
