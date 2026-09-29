@@ -4,7 +4,7 @@
 
 Embeddable collaborative Markdown editor for React. It renders GFM, code, math, Mermaid, and a split preview. The host owns identity, files, permissions, and the durable save path.
 
-Licensed under [AGPL-3.0-only](LICENSE).
+Licensed under [MIT](LICENSE).
 
 ## Install
 
