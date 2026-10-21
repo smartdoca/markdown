@@ -21,6 +21,7 @@ import { imageToDataUrl } from '../editor/upload'
 import type { CollaborationSession, CollaborationUser, ConnectionState, ViewMode } from '../editor/types'
 import type { ToolbarProps } from '../components/Toolbar'
 import type { MarkdownPreviewProps } from '../components/MarkdownPreview'
+import type { MarkdownImagePreviewEvent } from '../editor/image-preview'
 import type { CollaborativeMarkdownEditorHandle, EditorMode, EditorResources, MarkdownFindMatch, MarkdownFindOptions,
   MarkdownActiveView, MarkdownSelectionAction, MarkdownSelectionActionContext } from '../editor/integration'
 import { createMarkdownTextAnchor, createMarkdownTextSelection, resolveMarkdownTextAnchor,
@@ -61,6 +62,8 @@ export interface CollaborativeMarkdownEditorProps {
   mode?: EditorMode
   /** Host-owned asset callbacks. Keep this object reference stable for the document session. */
   resources?: EditorResources
+  /** Host-owned image/diagram preview and document gallery. Omit to use the built-in lightbox. */
+  onImagePreview?: (event: MarkdownImagePreviewEvent) => void
   onUploadProgress?: (percent: number) => void
   onChange?: (markdown: string) => void
   onConnectionChange?: (state: ConnectionState) => void
@@ -98,7 +101,7 @@ const StableCodeMirror = memo(CodeMirror)
 const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, CollaborativeMarkdownEditorProps & { standalone?: boolean }>(function EditorSurface({ roomId, collaboration,
   uploadImage: uploadImageProp, defaultViewMode = 'split',
   title: titleProp, className = '', height = '100vh', syncScroll = true, previewDebounceMs, mode: editorMode = 'edit',
-  resources, onUploadProgress, onChange, onConnectionChange, components = {}, standalone = false,
+  resources, onImagePreview, onUploadProgress, onChange, onConnectionChange, components = {}, standalone = false,
   selectionActions = [], selectionToolbar = true, toolbarActions = [], locale, messages,
 }, ref) {
   const t = (key: string, values?: MessageValues) => translate(locale, key, values, messages)
@@ -357,7 +360,7 @@ const EditorSurface = forwardRef<CollaborativeMarkdownEditorHandle, Collaborativ
           event.stopPropagation()
         }
       }} aria-label={t('editor.pane')}><div className="pane-label"><span>MARKDOWN</span><span>{t('editor.characters', { count: value.length })}</span></div>{initialEditorValueRef.current !== undefined ? <StableCodeMirror ref={editorRef} onCreateEditor={onCreateEditor} value={initialEditorValueRef.current} extensions={extensions} editable={!effectiveReadOnly} readOnly={effectiveReadOnly} basicSetup={BASIC_SETUP} /> : <Loading state={session.state} errorMessage={session.error ? collaborationErrorText(session.error, locale, messages) : undefined} locale={locale} messages={messages} />}</section>
-      {mode !== 'edit' && <section ref={previewPaneRef} className="preview-pane" aria-busy={previewValue !== value} onPointerDown={() => { activeView.current = 'preview' }} aria-label={t('preview.pane')}><div className="pane-label"><span>{t('preview.label')}</span><span>{previewValue !== value ? t('preview.updating') : syncScroll && mode === 'split' ? t('preview.syncScroll') : t('preview.live')}</span></div><Preview value={previewValue} resolveImageUrl={resources?.resolveUrl} interaction={preview} locale={locale} messages={messages} /></section>}
+      {mode !== 'edit' && <section ref={previewPaneRef} className="preview-pane" aria-busy={previewValue !== value} onPointerDown={() => { activeView.current = 'preview' }} aria-label={t('preview.pane')}><div className="pane-label"><span>{t('preview.label')}</span><span>{previewValue !== value ? t('preview.updating') : syncScroll && mode === 'split' ? t('preview.syncScroll') : t('preview.live')}</span></div><Preview value={previewValue} resolveImageUrl={resources?.resolveUrl} onImagePreview={onImagePreview} interaction={preview} locale={locale} messages={messages} /></section>}
     </main>
     <Footer readOnly={effectiveReadOnly} locale={locale} messages={messages} />
   </div>

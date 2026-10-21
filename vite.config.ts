@@ -8,10 +8,10 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     resolve: {
       dedupe: ['react', 'react-dom', 'yjs', '@codemirror/state', '@codemirror/view'],
-      alias: packageDirectory ? [
-        { find: 'exmd-collaborative-editor/style.css', replacement: packageDirectory + '/dist/style.css' },
-        { find: 'exmd-collaborative-editor', replacement: packageDirectory + '/dist/index.js' },
-      ] : [],
+      alias: [
+        { find: '@smartdoca/markdown/style.css', replacement: packageDirectory ? packageDirectory + '/dist/style.css' : new URL('./src/styles.css', import.meta.url).pathname },
+        { find: '@smartdoca/markdown', replacement: packageDirectory ? packageDirectory + '/dist/index.js' : new URL('./src/lib/index.ts', import.meta.url).pathname },
+      ],
     },
     build: { outDir: 'demo-dist' },
   }

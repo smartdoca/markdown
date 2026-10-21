@@ -1,0 +1,43 @@
+✔ host session uses the fixed markdown root and creates no transport or storage (10.843792ms)
+✔ host session rejects an uninitialized document without writing it (0.429083ms)
+✔ status/save/profile snapshots retain all model instances (0.50825ms)
+✔ only local markdown content enters the host update subscription and remote does not echo (1.646625ms)
+✔ concurrent edits converge and disconnected updates replay unchanged (0.814167ms)
+✔ a remote deletion and repeated sync never becomes a local pending update (0.8205ms)
+✔ relative selections and permanent anchors survive concurrent insertion (0.802583ms)
+✔ the same account in two pages retains two distinct presence sessions (0.253959ms)
+✔ undo uses the same Y.Text model transaction (0.360875ms)
+✔ comment anchors exclude both boundaries, include internal edits and orphan after full deletion (0.863792ms)
+✔ malformed/collapsed anchors fail safely without writing the model (0.292583ms)
+✔ UTF-8 / Chinese / emoji / CRLF roundtrip retains exact source bytes (1.099208ms)
+✔ BOM removed once, internal U+FEFF retained and reported (0.171625ms)
+✔ empty, BOM-only and heading-only files are valid (0.171042ms)
+✔ mixed line endings are reported but not normalized (0.088ms)
+✔ malformed and truncated UTF-8 / UTF-16 are rejected without substitution (0.584625ms)
+✔ binary NUL is rejected, extension and byte limit are checked before reading (0.354333ms)
+✔ read errors and invalid limits are explicit (0.274125ms)
+✔ large document supported up to the configured limit (10.261667ms)
+✔ assets, attachments, internal links and raw HTML stay untouched with explicit resource warning (0.211041ms)
+✔ export rejects lone surrogates instead of Blob silent replacement (0.195875ms)
+✔ exchange never fetches resources or initiates downloads (0.090917ms)
+✔ Markdown to PDF to Markdown keeps readable headings, paragraphs, lists, tables and code (102.162375ms)
+✔ HTML comments do not swallow the following Markdown table (5.426875ms)
+✔ fenced code info strings do not swallow following headings and tables (11.780292ms)
+✔ fenced code is syntax highlighted in the PDF (2.732ms)
+✔ image resolver is called in source order and embedded images roundtrip as resources (9.454417ms)
+✔ unsafe links are downgraded and export does not fetch resources (4.661542ms)
+✔ invalid, oversized and cancelled imports have explicit error codes (0.980875ms)
+✔ export does not mutate the source and resource failures become warnings (0.739041ms)
+✔ esm root keeps PDF runtimes cold until an explicit import (430.334084ms)
+✔ esm root keeps PDF runtimes cold until an explicit export (381.509042ms)
+✔ cjs root keeps PDF runtimes cold until an explicit import (369.088083ms)
+✔ cjs root keeps PDF runtimes cold until an explicit export (382.273458ms)
+✔ content centers move at different speeds across code, text and images (0.440875ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1600.550625

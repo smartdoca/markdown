@@ -36,6 +36,7 @@ export function Markdown({ markdown }: { markdown: string }) {
 | `user` | `CollaborationUser` | 内建传输使用的显示身份。 |
 | `mode` | `EditorMode` | `readonly` 停止编辑。 |
 | `resources` | `EditorResources` | 宿主资源回调。会话期间保持对象引用不变。 |
+| `onImagePreview` | `(event: MarkdownImagePreviewEvent) => void` | 接管图片/图表预览，获得当前项及同文档图集。 |
 | `uploadImage` | `(file) => Promise<string>` | 图片上传。默认转为 data URL。 |
 | `onChange` | `(markdown) => void` | 本地 Markdown 文本。 |
 | `onConnectionChange` | `(state) => void` | 连接状态。 |
@@ -61,3 +62,11 @@ export function Markdown({ markdown }: { markdown: string }) {
 - `locale` 和 `messages` 只改变界面文案。
 
 包根路径还导出 `MarkdownPreview`、`importMarkdownFile`、`exportMarkdownFile`、`importPdfFile` 和 `exportPdfFile`。
+
+显示数学公式时，宿主需导入 `katex/dist/katex.min.css`。PDF 运行时仅在显式调用 `importPdfFile` 或 `exportPdfFile` 时加载。
+
+## 图片预览
+
+点击图片或 Mermaid 图表打开内置图集。拖动可平移，滚轮或按钮可缩放，上一张/下一张按钮、左右方向键或初始缩放下的触控横滑可切图。Escape 关闭。只读模式也支持预览；所有预览操作只改变界面状态，不修改 Markdown 或协同文档。
+
+`CollaborativeMarkdownEditor` 和 `MarkdownPreview` 都接受 `onImagePreview`；传入后由宿主完全接管预览。自定义 `components.Preview` 包装组件需要转发该属性。包根导出 `MarkdownImagePreviewEvent`（`image`、按文档顺序排列的 `images`、`index`）和 `MarkdownPreviewImage` 类型。图片保留原始 `path`、显示元数据及当前解析的 `src`；资源权限和 URL 解析始终由宿主负责。详细说明见[事件契约](docs/IMAGE_PREVIEW.md)。

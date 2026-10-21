@@ -1,0 +1,54 @@
+{
+  "label": "source",
+  "base": "http://127.0.0.1:5198",
+  "suites": [
+    {
+      "button": "image-tests",
+      "text": "PASS host gallery: Markdown/reference/HTML/linked/duplicate images and Mermaid; original paths, titles, dimensions, source offsets and distinct IDs\nPASS latest host callback, readonly and keyboard activation, URL refresh with stable identities, zero content writes and stable editor\nPASS unrelated text edit preserves image identities and updates source offsets; preview adds no writes\nPASS readonly built-in gallery: next/previous buttons and keys, zoom/wheel, synthetic pointer pan, reset, Mermaid, Escape/focus/scroll cleanup; zero writes\nPASS pending image resolves inside the same open gallery without changing the selected index or writing content\nPASS synchronous/asynchronous URL resolution failures, unavailable-state navigation and ignored late resolver results; zero writes and stable editor\nPASS Mermaid source identity never exposes the previous SVG; host callback receives the current generated diagram without preview writes or editor replacement\nIMAGES ALL PASSED\n"
+    },
+    {
+      "button": "run",
+      "text": "PASS empty: preview cycles, remote edit while hidden, readonly/status, undo/redo, replaceAll\nPASS existing: preview cycles, remote edit while hidden, readonly/status, undo/redo, replaceAll\nPASS initial preview + ready/error transitions retain backing model/view\nPASS concurrent local edits + host reconnect replay converge without echo\nPASS public remote carets/names, multi-line ranges, same-user sessions, position updates and clear/readonly\nPASS comment underline/active/click/card reveal/clear/resolved/deleted/orphan\nPASS preview upload completion, concurrent remote edit, readonly abort + ignored late result\nALL PASSED\n"
+    },
+    {
+      "button": "preview-tests",
+      "text": "PASS exact five characters; duplicate text in same line/other paragraph; no stale source fallback\nPASS nested marks/link labels, soft/hard line breaks, entities/escapes, inline code, lists and tables\nPASS shared underline/background, preview card reveal, overlapping comment cycling, clear activation\nPASS readonly comment permission, native selection retention, host callback, top fallback and disabled permission\nPASS local/remote insert-delete, retained relative selection, view switching and zoom/scroll geometry\nPASS resolve/delete/remove/orphan cleanup, stable instances and zero SDK transport/storage\nPASS Unicode/CRLF, reference links, safe HTML color, element boundaries and unsupported content rejection\nPREVIEW ALL PASSED\n"
+    },
+    {
+      "button": "end-tests",
+      "text": "PASS blank click: \"\" / readonly / no content writes / append\nPASS blank click: \"最后一行文字\" / readonly / no content writes / append\nPASS blank click: \"第一行\\n最后一行\" / readonly / no content writes / append\nPASS blank click: \"末尾有换行\\n\" / readonly / no content writes / append\nPASS blank click: \"自动折行文字 自动折行文字 自动折行\" / readonly / no content writes / append\nPASS all document-end click cases\n"
+    }
+  ],
+  "native": {
+    "dragAtInitialZoom": "translate(130px, 75px) scale(1)",
+    "dragAfterZoom": "translate(50px, 115px) scale(1.25)",
+    "touchSwipe": true,
+    "after": {
+      "count": {
+        "pending": 0,
+        "changes": 0
+      },
+      "stable": true,
+      "effects": {
+        "sockets": 0,
+        "dbOpens": 0,
+        "localWrites": 0
+      },
+      "baseline": {
+        "pending": 0,
+        "changes": 0
+      }
+    }
+  },
+  "errors": [],
+  "pdfRequests": [],
+  "math": {
+    "top": "-3.063em",
+    "mathmlClipPath": "inset(50%)"
+  },
+  "sanitized": {
+    "color": "rgb(255, 0, 0)",
+    "position": ""
+  },
+  "passed": true
+}

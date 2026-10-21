@@ -1,5 +1,6 @@
 const results = document.getElementById('results')
 import { runPreviewSuite, selectRenderedText } from './preview.js'
+import { runImageSuite } from './images.js'
 import { runFileSuite } from './files.js'
 import { runPerformanceSuite } from './performance.js'
 const clients = document.getElementById('clients')
@@ -250,6 +251,12 @@ document.getElementById('run').onclick = async () => {
 document.getElementById('preview-tests').onclick = async () => {
   await reset()
   try { await runPreviewSuite({ client, pause, assert, until, sync, same, button, log }); log('PREVIEW ALL PASSED') }
+  catch (error) { log('FAIL ' + error.stack) }
+}
+
+document.getElementById('image-tests').onclick = async () => {
+  await reset()
+  try { await runImageSuite({ client, pause, assert, until, log }); log('IMAGES ALL PASSED') }
   catch (error) { log('FAIL ' + error.stack) }
 }
 
