@@ -5,6 +5,7 @@ export type { CollaborativeMarkdownEditorProps, CollaborativeMarkdownEditorCompo
   EditorHeaderProps, EditorLoadingProps, EditorFooterProps } from './CollaborativeMarkdownEditor'
 export { MarkdownPreview } from '../components/MarkdownPreview'
 export type { MarkdownPreviewProps } from '../components/MarkdownPreview'
+export type { MarkdownPreviewImage, MarkdownImagePreviewEvent } from '../editor/image-preview'
 export type { MarkdownPreviewInteraction } from '../editor/preview-interaction'
 export { Toolbar } from '../components/Toolbar'
 export type { ToolbarProps } from '../components/Toolbar'

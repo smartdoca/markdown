@@ -4,10 +4,11 @@ import * as Y from 'yjs'
 import {
   CollaborativeMarkdownEditor, createHostMarkdownSession, observeLocalMarkdownUpdates,
   applyRemoteMarkdownUpdate, updateHostMarkdownSession, createMarkdownTextSelection,
-  createMarkdownTextAnchor, encodeMarkdownCheckpoint,
+  createMarkdownTextAnchor, encodeMarkdownCheckpoint, initializeMarkdownDocument,
   importMarkdownFile, exportMarkdownFile,
-} from 'exmd-collaborative-editor'
-import 'exmd-collaborative-editor/style.css'
+} from '@smartdoca/markdown'
+import '@smartdoca/markdown/style.css'
+import 'katex/dist/katex.min.css'
 
 // Real host fixtures: no SDK provider or awareness channel. The runner delivers original bytes.
 const root = createRoot(document.getElementById('root'))
@@ -20,7 +21,8 @@ const setItem = Storage.prototype.setItem
 Storage.prototype.setItem = function (...args) { localWrites++; return setItem.apply(this, args) }
 const editor = createRef()
 const doc = new Y.Doc()
-let session = createHostMarkdownSession({ doc, ready: false, state: 'loading', saveState: 'unavailable' })
+let session
+let stop = () => {}
 let readonly = false
 let initialValue = 'MUST NOT SEED'
 let base = ''
@@ -30,6 +32,22 @@ let snapshotHandle
 let renderVersion = 0
 let actionEvents = [], floatingActions = true, commentDisabled = false
 let previewDebounceMs
+let imagePreviewCallback
+let imageEvents = [], imageResolutions = [], lateImages = []
+let imageResolutionVersion = 0
+const imageUrl = (path, version = imageResolutionVersion) => 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1200"><rect width="1800" height="1200" fill="#d9e8ff"/><text x="80" y="150" font-size="64">' +
+  String(path).replace(/[<>&]/g, '') + ' / ' + version + '</text></svg>')
+function imageResolver(mode = 'normal') {
+  const version = ++imageResolutionVersion
+  return path => {
+    imageResolutions.push({ path, mode, version })
+    if (mode === 'throw') throw new Error('Fixture synchronous image resolution failure')
+    if (mode === 'reject') return Promise.reject(new Error('Fixture asynchronous image resolution failure'))
+    if (mode === 'late') return new Promise(resolve => lateImages.push({ path, version, resolve }))
+    return imageUrl(path, version)
+  }
+}
 const selectionActions = () => [{ id: 'comment', title: '添加区域评论', icon: '评', disabled: commentDisabled,
   onClick: context => {
     actionEvents.push(context)
@@ -41,7 +59,7 @@ const selectionActions = () => [{ id: 'comment', title: '添加区域评论', ic
   } }]
 const resources = {
   uploadImage: (file, context) => new Promise(resolve => uploads.push({ resolve, context })),
-  resolveUrl: () => 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"/>'),
+  resolveUrl: imageResolver(),
 }
 const props = () => ({
   ref: editor, collaboration: session, mode: readonly ? 'readonly' : 'edit', initialValue,
@@ -50,30 +68,56 @@ const props = () => ({
   onChange: () => { changes++ },
   selectionActions: selectionActions(), selectionToolbar: floatingActions,
   previewDebounceMs,
+  onImagePreview: imagePreviewCallback,
 })
-function render() { root.render(<CollaborativeMarkdownEditor {...props()} />) }
-const stop = observeLocalMarkdownUpdates(session, ({ update, origin }) => {
-  updates.push(Array.from(update))
-  trace.push({ origin: origin?.constructor?.name, text: doc.getText('markdown').toString(), stack: new Error().stack })
-})
+function render() {
+  root.render(session ? <CollaborativeMarkdownEditor {...props()} /> : <div role="status">Waiting for host checkpoint</div>)
+}
+function readySession() {
+  if (session) {
+    session = updateHostMarkdownSession(session, { ready: true, state: 'ready', saveState: 'clean' })
+    return
+  }
+  // The server checkpoint supplies both the text and its current-schema metadata.
+  // Creating metadata in each client would introduce unsent local Yjs clocks.
+  session = createHostMarkdownSession({ doc, ready: true, state: 'ready', saveState: 'clean' })
+  stop = observeLocalMarkdownUpdates(session, ({ update, origin }) => {
+    updates.push(Array.from(update))
+    trace.push({ origin: origin?.constructor?.name, text: doc.getText('markdown').toString(), stack: new Error().stack })
+  })
+}
 window.fixture = {
   async bootstrap(value = '') {
     base = value
     const server = new Y.Doc()
-    server.getText('markdown').insert(0, value)
+    initializeMarkdownDocument(server, value)
     applyRemoteMarkdownUpdate(doc, Y.encodeStateAsUpdate(server))
     server.destroy()
-    session = updateHostMarkdownSession(session, { ready: true, state: 'ready', saveState: 'clean' })
+    readySession()
     render()
   },
   async load(bytes) {
     applyRemoteMarkdownUpdate(doc, new Uint8Array(bytes))
-    session = updateHostMarkdownSession(session, { ready: true, state: 'ready', saveState: 'clean' })
+    readySession()
     render()
   },
   editor: () => editor.current,
   view: () => editor.current?.getEditorView(),
   text: () => doc.getText('markdown').toString(),
+  source: () => base,
+  replaceSource(value) { return editor.current.replaceMarkdown(value) },
+  imageHost(enabled = true, callback = 'host') {
+    imagePreviewCallback = enabled ? event => imageEvents.push({ callback, event }) : undefined
+    render()
+  },
+  imageEvents: () => imageEvents,
+  imageResolution(mode = 'normal') { resources.resolveUrl = imageResolver(mode); render() },
+  imageResolutions: () => imageResolutions,
+  pendingImageResolutions: () => lateImages.length,
+  resolveImages() {
+    const pending = lateImages; lateImages = []
+    for (const item of pending) item.resolve(imageUrl(item.path, item.version))
+  },
   importFile: (source, name = 'document.md', options) => importMarkdownFile(new File([source], name), options),
   exportFile: () => exportMarkdownFile(editor.current.getMarkdown(), { fileName: '原文交换.md' }),
   takeUpdates: () => { const result = updates; updates = []; return result },
@@ -88,7 +132,7 @@ window.fixture = {
   previewDelay(value) { previewDebounceMs = value; render() },
   status(state = 'ready', ready = true) {
     renderVersion++
-    session = updateHostMarkdownSession(session, { ready, state, saveState: renderVersion % 2 ? 'saving' : 'clean' })
+    if (session) session = updateHostMarkdownSession(session, { ready, state, saveState: renderVersion % 2 ? 'saving' : 'clean' })
     render()
   },
   remember() { snapshotView = this.view(); snapshotHandle = editor.current },
@@ -115,6 +159,6 @@ window.fixture = {
   actionEvents: () => actionEvents,
   actionOptions(floating, disabled = false) { floatingActions = floating; commentDisabled = disabled; render() },
   selections: () => localSelections,
-  dispose() { stop(); root.unmount(); session.dispose(); doc.destroy() },
+  dispose() { stop(); root.unmount(); session?.dispose?.(); doc.destroy() },
 }
 render()

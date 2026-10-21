@@ -20,3 +20,7 @@
 - 评论锚点使用永久 Yjs RelativePosition，不能复用 awareness 游标。
 
 当前 `y-websocket` 适配器用于本地演示，没有持久化 ACK，因此公开的 `saveState` 固定为 `unavailable`。产品界面不应据此显示“已保存”。
+
+## 图片预览边界（0.4.4）
+
+`onImagePreview` 可由宿主接管当前图片和同文档图集；原始资源 `path` 保留，URL 解析和资源 ACL 仍归宿主。未传回调时使用内置拖动、缩放与切图界面。图片和 Mermaid 图表预览均只改变组件状态，不写 Y.Text、不重建编辑器、不进入 undo/outbox。协议、codec/schema、基线、历史读取与存储格式均未改变。事件定义和稳定性范围见 [IMAGE_PREVIEW.md](IMAGE_PREVIEW.md)。

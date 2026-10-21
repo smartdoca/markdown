@@ -36,6 +36,7 @@ A host-managed session replaces `roomId` and `websocketUrl`. Without `collaborat
 | `user` | `CollaborationUser` | Display identity for the built-in transport. |
 | `mode` | `EditorMode` | `readonly` stops editing. |
 | `resources` | `EditorResources` | Host asset callbacks. Keep the object reference stable for the session. |
+| `onImagePreview` | `(event: MarkdownImagePreviewEvent) => void` | Takes over image/diagram preview with the current item and document gallery. |
 | `uploadImage` | `(file) => Promise<string>` | Image upload. Defaults to a data URL. |
 | `onChange` | `(markdown) => void` | Local markdown text. |
 | `onConnectionChange` | `(state) => void` | Connection state. |
@@ -61,3 +62,11 @@ Give the host `collaboration` session to the editor and keep that object for the
 - `locale` and `messages` change interface copy only.
 
 Other entry points on the package root include `MarkdownPreview`, `importMarkdownFile`, `exportMarkdownFile`, `importPdfFile`, and `exportPdfFile`.
+
+Import `katex/dist/katex.min.css` in the host when displaying math. PDF runtimes load only when `importPdfFile` or `exportPdfFile` is explicitly called.
+
+## Image preview
+
+Click an image or Mermaid diagram to open the built-in gallery. Drag to pan, use the wheel or buttons to zoom, and switch images with the previous/next buttons, arrow keys, or a horizontal touch swipe at the initial zoom. Escape closes the gallery. Preview also works in readonly mode and never changes Markdown or collaboration state.
+
+Both `CollaborativeMarkdownEditor` and `MarkdownPreview` accept `onImagePreview`. Supplying it delegates the complete preview to the host. Custom `components.Preview` wrappers must forward this prop. The exported `MarkdownImagePreviewEvent` includes `image`, `images` in document order, and `index`; each `MarkdownPreviewImage` retains its original `path`, display metadata, and current resolved `src`. Keep resource authorization and URL resolution in the host. See [the event contract](docs/IMAGE_PREVIEW.md).

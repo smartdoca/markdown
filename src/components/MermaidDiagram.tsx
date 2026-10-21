@@ -6,8 +6,9 @@ let initialized = false
 export interface MermaidDiagramProps { code: string; locale?: string; messages?: EditorMessages }
 export const MermaidDiagram = memo(function MermaidDiagram({ code, locale, messages }: MermaidDiagramProps) {
   const reactId = useId().replace(/:/g, '')
-  const [svg, setSvg] = useState('')
-  const [failed, setFailed] = useState(false)
+  const [result, setResult] = useState<{ code: string; svg: string; failed: boolean } | null>(null)
+  const svg = result?.code === code ? result.svg : ''
+  const failed = result?.code === code && result.failed
   useEffect(() => {
     let active = true
     const id = `mermaid-${reactId}-${Date.now()}`
@@ -17,8 +18,8 @@ export const MermaidDiagram = memo(function MermaidDiagram({ code, locale, messa
         initialized = true
       }
       return mermaid.render(id, code)
-    }).then(({ svg: result }) => { if (active) { setSvg(result); setFailed(false) } })
-      .catch(() => { if (active) { setSvg(''); setFailed(true) } })
+    }).then(({ svg }) => { if (active) setResult({ code, svg, failed: false }) })
+      .catch(() => { if (active) setResult({ code, svg: '', failed: true }) })
     return () => { active = false }
   }, [code, reactId])
   if (failed) return <div className="diagram-error">{translate(locale, 'diagram.syntaxError', undefined, messages)}</div>
