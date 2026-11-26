@@ -1,15 +1,20 @@
+import { additionalCatalogs } from './locales.ts'
+
 export type MessageValues = Record<string, string | number>
 export type EditorMessages = Record<string, string>
 export type Translate = (key: string, values?: MessageValues) => string
 
-/** Omitted locale stays Chinese. Only `zh` and `en` are recognized; anything else is English. */
-export function resolveEditorLocale(locale?: string): 'zh' | 'en' {
+/** Omitted locale uses Chinese. Unknown locale codes use English. */
+type EditorLocale = keyof typeof catalogs
+
+export function resolveEditorLocale(locale?: string): EditorLocale {
   if (locale == null || locale === '') return 'zh'
-  return locale === 'zh' ? 'zh' : 'en'
+  return Object.hasOwn(catalogs, locale) ? locale as EditorLocale : 'en'
 }
 
-export function editorLanguageTag(locale?: string): 'zh-CN' | 'en' {
-  return resolveEditorLocale(locale) === 'zh' ? 'zh-CN' : 'en'
+export function editorLanguageTag(locale?: string) {
+  const code = resolveEditorLocale(locale)
+  return code === 'zh' ? 'zh-CN' : code
 }
 
 const en: EditorMessages = {
@@ -279,7 +284,8 @@ function assertSameKeys(left: EditorMessages, right: EditorMessages) {
 }
 assertSameKeys(en, zh)
 
-const catalogs = { en, zh }
+const catalogs = { en, zh, ...additionalCatalogs }
+for (const catalog of Object.values(additionalCatalogs)) assertSameKeys(en, catalog)
 
 export function editorMessageKeys(): { en: string[]; zh: string[] } {
   return { en: Object.keys(en).sort(), zh: Object.keys(zh).sort() }

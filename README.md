@@ -47,7 +47,7 @@ A host-managed session replaces `roomId` and `websocketUrl`. Without `collaborat
 | `defaultViewMode` | `ViewMode` | Initial editor, preview, or split view. |
 | `syncScroll` | `boolean` | Scrolls the preview with the editor. Defaults to `true`. |
 | `previewDebounceMs` | `number` | Preview debounce. Automatic timing is 150ms for large documents, otherwise 0. |
-| `locale` | `string` | `zh` or `en`. Omitted stays Chinese. Unknown codes show English. Switching updates chrome only. |
+| `locale` | `string` | `zh`, `en`, `zh-Hant`, `ja`, `fr`, `ko`, `es`, `ru`. Omitted uses Simplified Chinese. Unknown codes use English. |
 | `messages` | `EditorMessages` | Replaces individual catalog entries. |
 | `title`, `className`, `height` | | Chrome and layout. `height` defaults to `100vh`. |
 | `persistence`, `persistenceKey` | | Built-in IndexedDB for the demo transport. Leave them off for a host session. |

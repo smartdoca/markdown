@@ -19,7 +19,8 @@ test('omitted locale is Chinese and unknown locales are English', () => {
   assert.equal(resolveEditorLocale('en'), 'en')
   assert.equal(resolveEditorLocale('zh-CN'), 'en')
   assert.equal(translate(undefined, 'toolbar.undo'), '撤销')
-  assert.equal(translate('fr', 'toolbar.undo'), 'Undo')
+  assert.equal(translate('ar', 'toolbar.undo'), 'Undo')
+  assert.equal(translate('fr', 'toolbar.undo'), 'Annuler')
 })
 
 test('placeholders, plurals, and overrides', () => {
