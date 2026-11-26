@@ -47,7 +47,7 @@ export function Markdown({ markdown }: { markdown: string }) {
 | `defaultViewMode` | `ViewMode` | 初始的编辑、预览或分屏。 |
 | `syncScroll` | `boolean` | 预览跟随编辑器滚动。默认 `true`。 |
 | `previewDebounceMs` | `number` | 预览防抖。大文档自动为 150ms，否则为 0。 |
-| `locale` | `string` | `zh` 或 `en`。省略为中文。未知代码显示英文。切换只更新界面。 |
+| `locale` | `string` | `zh`, `en`, `zh-Hant`, `ja`, `fr`, `ko`, `es`, `ru`。缺省使用简体中文，未知代码使用英文。 |
 | `messages` | `EditorMessages` | 替换单个文案。 |
 | `title`、`className`、`height` | | 界面和布局。`height` 默认 `100vh`。 |
 | `persistence`、`persistenceKey` | | 演示传输的 IndexedDB。宿主会话不要开启。 |
